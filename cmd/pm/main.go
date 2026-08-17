@@ -8,8 +8,10 @@ import (
 	"strconv"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 	"github.com/chaos/pj/internal/store"
+	"github.com/chaos/pj/internal/tui"
 )
 
 var rootCmd = &cobra.Command{
@@ -42,12 +44,13 @@ var addCmd = &cobra.Command{
 		cwd, _ := os.Getwd()
 		s := store.NewStore(filepath.Join(cwd, ".pm"))
 		title := ""
+		desc, _ := cmd.Flags().GetString("description")
 		if len(args) == 1 {
 			title = args[0]
 		} else {
-			return fmt.Errorf("title required (TUI not yet implemented)")
+			return fmt.Errorf("title required")
 		}
-		item := s.NewItem(title, "")
+		item := s.NewItem(title, desc)
 		if err := item.Save(s); err != nil {
 			return err
 		}
@@ -168,11 +171,32 @@ var renumCmd = &cobra.Command{
 	},
 }
 
+var showCmd = &cobra.Command{
+	Use:   "show",
+	Short: "Show interactive TUI with progress bar",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		s := store.NewStore(filepath.Join(cwd, ".pm"))
+		items, err := s.LoadItems()
+		if err != nil {
+			return err
+		}
+		p := tea.NewProgram(tui.New(items, s))
+		_, err = p.Run()
+		return err
+	},
+}
+
 func init() {
+	addCmd.Flags().StringP("description", "d", "", "description of the item")
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(doneCmd)
+	rootCmd.AddCommand(showCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(renumCmd)
 }
