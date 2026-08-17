@@ -54,21 +54,36 @@ Si un harness propone algo de esto, **lo manda a backog**, no se construye.
 
 ---
 
-## MemPalace — Memoria del proyecto
+## MemPalace — Memoria a largo plazo
 
-pj tiene un wing en MemPalace (`wing: pj`). Ahí vive toda la información de arquitectura, decisiones y bitácora.
+El proyecto tiene un wing en MemPalace (`wing: pj`). Toda decisión, lección y arquitectura vive acá. **Nunca se pierde.**
 
-**Antes de preguntar algo del proyecto, BUSCÁ en MemPalace:**
+### Rooms estándar (metodología MemPalace)
+
+| Room | Propósito | Cuándo escribir |
+|------|-----------|-----------------|
+| `architecture` | Diseño, stack, archivos clave, decisiones de arquitectura | Cuando se define o cambia el diseño |
+| `decisions` | Por qué X sobre Y (trade-offs, alternativas rechazadas) | Cuando se toma una decisión con pros/tras |
+| `lessons` | Errores, gotchas, "no hacer X de nuevo" | Cuando algo se rompe o se aprende un patrón |
+| `diario` | Bitácora de sesión: qué se hizo, qué importa | **Después de cada sesión de trabajo** |
+
+### Protocolo OBLIGATORIO para harness externo (OpenCode/Agy/Codex)
+
+Cada vez que delegues a un harness, incluí esto en el context:
+
+> **PROTOCOLO MEMPALACE:**
+> 1. ANTES de codear: ejecutá `mempalace search "<tema>" --wing pj` para aprender patrones existentes
+> 2. DESPUÉS de codear: llamá a `mcp__mempalace__mempalace_add_drawer` para registrar qué hiciste y por qué
+> 3. Usá room `architecture` para diseño, `decisions` para trade-offs, `lessons` para errores, `diario` para bitácora
+
+### Search antes de responder
+
+Si el usuario pregunta algo que ya se discutió en otra sesión:
 ```bash
-mempalace search "tema" --wing pj
+mempalace search "<tema>" --wing pj
 ```
+Si no encontrás nada, decís "no encontré contexto previo" — **nunca inventes**.
 
-**Drawers actuales en `pj/`:**
-- `pj/architecture` — Diseño general, stack, comandos, decisiones
-- `pj/decisions` — Decisiones de diseño tomadas
-- `pj/lessons` — Lecciones aprendidas durante el desarrollo
-
-**Después de cada sesión de trabajo:** llamar `mempalace diary_write` con qué se hizo y qué se aprendió.
 
 ---
 
