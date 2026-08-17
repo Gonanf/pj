@@ -55,6 +55,7 @@ pj renum
 ## 💻 Comandos
 
 ### `pj init`
+
 Inicializa el directorio `.pm/` con su archivo de configuración `project.toml` y el directorio `items/`.
 
 ```bash
@@ -63,6 +64,7 @@ Initialized pj in /home/user/repo/.pm
 ```
 
 ### `pj add [titulo] [-d descripción]`
+
 Crea un nuevo item con ID autoincremental y estado inicial `todo`.
 
 ```bash
@@ -71,6 +73,7 @@ Added [#1] Implementar login con OAuth
 ```
 
 ### `pj list`
+
 Muestra un listado compacto de todos los items coloreados según su estado.
 
 ```bash
@@ -81,15 +84,18 @@ $ pj list
 ```
 
 ### `pj show`
+
 Abre la interfaz TUI interactiva basada en Bubbletea con barra de progreso agrupada por estado.
 
 **Controles dentro de la TUI:**
+
 - `↑` / `k` o `↓` / `j`: Navegar entre items.
 - `Espacio`: Ciclar al siguiente estado.
 - `1` a `8`: Asignar estado numéricamente directo.
 - `q` / `Esc` / `Ctrl+C`: Salir de la TUI.
 
 ### `pj done <id>`
+
 Cambia de forma directa el estado del item especificado a `done`.
 
 ```bash
@@ -98,6 +104,7 @@ $ pj done 1
 ```
 
 ### `pj status`
+
 Ejecuta un chequeo de salud sobre el proyecto. Detecta colisiones de IDs (por ejemplo, luego de un merge conflict en Git).
 
 ```bash
@@ -106,6 +113,7 @@ Project healthy
 ```
 
 ### `pj renum`
+
 Reordena y renumera correlativamente todos los IDs de los items según su fecha de creación (`created`).
 
 ```bash
@@ -169,4 +177,4 @@ Todos los datos se guardan en texto plano dentro del repositorio, facilitando re
 
 ## 📄 Licencia
 
-Este proyecto está bajo la Licencia [MIT](LICENSE).
+// TODO
