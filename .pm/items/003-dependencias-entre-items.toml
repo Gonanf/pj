@@ -1,0 +1,6 @@
+id = 3
+title = 'Dependencias entre items'
+description = 'Grafo DAG con detección de ciclos y validación con pm validate'
+state = 'todo'
+created = '2026-08-17T14:21:53-03:00'
+updated = '2026-08-17T14:21:53-03:00'

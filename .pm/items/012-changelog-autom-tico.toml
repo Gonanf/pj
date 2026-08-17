@@ -1,0 +1,6 @@
+id = 12
+title = 'Changelog automático'
+description = 'Generar release notes a partir de items completados entre versiones'
+state = 'todo'
+created = '2026-08-17T14:21:53-03:00'
+updated = '2026-08-17T14:21:53-03:00'

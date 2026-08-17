@@ -191,7 +191,7 @@ var showCmd = &cobra.Command{
 }
 
 func init() {
-	addCmd.Flags().StringP("description", "d", "", "description of the item")
+	addCmd.Flags().StringP("description", "d", "", "description of the item (use single quotes for $ and special chars)")
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(listCmd)
