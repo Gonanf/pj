@@ -188,7 +188,7 @@ func TestTUIModel_View(t *testing.T) {
 	}
 
 	// Check footer
-	if !strings.Contains(view, "navigate") || !strings.Contains(view, "space done") || !strings.Contains(view, "q quit") {
+	if !strings.Contains(view, "navigate") || !strings.Contains(view, "space cycle") || !strings.Contains(view, "q quit") {
 		t.Errorf("view missing expected footer help, got:\n%s", view)
 	}
 }

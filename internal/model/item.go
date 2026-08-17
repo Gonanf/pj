@@ -35,6 +35,48 @@ func (i *Item) Save(d Dir) error {
 
 var nonAlnum = regexp.MustCompile(`[^a-z0-9]+`)
 
+// ValidStates son todos los estados válidos en orden de ciclo.
+var ValidStates = []string{
+	"todo",
+	"in progress",
+	"testing",
+	"blocked",
+	"done",
+	"closed",
+	"in specification",
+	"discarded",
+}
+
+// IsValidState verifica si un string es un estado válido.
+func IsValidState(s string) bool {
+	for _, v := range ValidStates {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
+// NextState devuelve el siguiente estado en el ciclo.
+func NextState(current string) string {
+	for i, s := range ValidStates {
+		if s == current {
+			return ValidStates[(i+1)%len(ValidStates)]
+		}
+	}
+	return "todo"
+}
+
+// StateIndex devuelve el índice numérico (1-based) de un estado.
+func StateIndex(s string) int {
+	for i, v := range ValidStates {
+		if v == s {
+			return i + 1
+		}
+	}
+	return 1
+}
+
 func slug(s string) string {
 	return strings.Trim(nonAlnum.ReplaceAllString(strings.ToLower(s), "-"), "-")
 }

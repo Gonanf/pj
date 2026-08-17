@@ -41,13 +41,16 @@ var (
 			Italic(true)
 
 	stateStyles = map[string]lipgloss.Style{
-		"done":        lipgloss.NewStyle().Foreground(lipgloss.Color("2")),  // Verde
-		"todo":        lipgloss.NewStyle().Foreground(lipgloss.Color("15")), // Blanco
-		"in progress": lipgloss.NewStyle().Foreground(lipgloss.Color("3")),  // Amarillo
-		"blocked":     lipgloss.NewStyle().Foreground(lipgloss.Color("1")),  // Rojo
-		"testing":     lipgloss.NewStyle().Foreground(lipgloss.Color("5")),  // Magenta
-		"discarded":   lipgloss.NewStyle().Foreground(lipgloss.Color("8")),  // Gris
+		"todo":             lipgloss.NewStyle().Foreground(lipgloss.Color("15")),
+		"in progress":      lipgloss.NewStyle().Foreground(lipgloss.Color("3")),
+		"testing":          lipgloss.NewStyle().Foreground(lipgloss.Color("5")),
+		"blocked":          lipgloss.NewStyle().Foreground(lipgloss.Color("1")),
+		"done":             lipgloss.NewStyle().Foreground(lipgloss.Color("2")),
+		"closed":           lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Bold(true),
+		"in specification": lipgloss.NewStyle().Foreground(lipgloss.Color("4")),
+		"discarded":        lipgloss.NewStyle().Foreground(lipgloss.Color("8")),
 	}
+
 	defaultItemStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("15"))
 )
 
@@ -73,10 +76,14 @@ func statePriority(state string) int {
 		return 4
 	case "done":
 		return 5
-	case "discarded":
+	case "closed":
 		return 6
-	default:
+	case "in specification":
 		return 7
+	case "discarded":
+		return 8
+	default:
+		return 9
 	}
 }
 
@@ -139,13 +146,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.cursor < len(m.items)-1 {
 				m.cursor++
 			}
-		case " ", "enter":
+		case " ":
+			// Ciclar al siguiente estado
 			if len(m.items) > 0 && m.cursor >= 0 && m.cursor < len(m.items) {
-				if m.items[m.cursor].State == "done" {
-					m.items[m.cursor].State = "todo"
-				} else {
-					m.items[m.cursor].State = "done"
-				}
+				current := m.items[m.cursor].State
+				m.items[m.cursor].State = model.NextState(current)
 				m.items[m.cursor].Updated = time.Now().Format(time.RFC3339)
 				if m.dir != nil {
 					_ = m.items[m.cursor].Save(m.dir)
@@ -156,6 +161,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				if m.cursor < 0 {
 					m.cursor = 0
+				}
+			}
+		case "1", "2", "3", "4", "5", "6", "7", "8":
+			// Seleccionar estado por número (1-based)
+			if len(m.items) > 0 && m.cursor >= 0 && m.cursor < len(m.items) {
+				idx := int(msg.String()[0] - '1')
+				if idx >= 0 && idx < len(model.ValidStates) {
+					m.items[m.cursor].State = model.ValidStates[idx]
+					m.items[m.cursor].Updated = time.Now().Format(time.RFC3339)
+					if m.dir != nil {
+						_ = m.items[m.cursor].Save(m.dir)
+					}
+					sortItems(m.items)
+					if m.cursor >= len(m.items) {
+						m.cursor = len(m.items) - 1
+					}
+					if m.cursor < 0 {
+						m.cursor = 0
+					}
 				}
 			}
 		}
@@ -176,7 +200,7 @@ func (m Model) View() string {
 	total := len(m.items)
 	doneCount := 0
 	for _, it := range m.items {
-		if it.State == "done" {
+		if it.State == "done" || it.State == "closed" {
 			doneCount++
 		}
 	}
@@ -196,7 +220,7 @@ func (m Model) View() string {
 	filledBar := progressBarFilledStyle.Render(strings.Repeat("█", filledWidth))
 	emptyBar := progressBarEmptyStyle.Render(strings.Repeat("░", emptyWidth))
 
-	progressBar := fmt.Sprintf("[%s%s] %d%% (%d/%d done)", filledBar, emptyBar, percent, doneCount, total)
+	progressBar := fmt.Sprintf("[%s%s] %d%% (%d/%d closed)", filledBar, emptyBar, percent, doneCount, total)
 	b.WriteString(progressBar + "\n\n")
 
 	// Item list grouped by state
@@ -215,7 +239,7 @@ func (m Model) View() string {
 			}
 
 			checkmark := "□"
-			if it.State == "done" {
+			if it.State == "done" || it.State == "closed" {
 				checkmark = "■"
 			}
 
@@ -239,7 +263,7 @@ func (m Model) View() string {
 	}
 
 	// Footer
-	b.WriteString(footerStyle.Render("↑/↓ navigate | space done | q quit"))
+	b.WriteString(footerStyle.Render("↑/↓ navigate | space cycle state | 1-8 set state | q quit"))
 
 	return b.String()
 }
