@@ -31,8 +31,31 @@ var initCmd = &cobra.Command{
 	},
 }
 
+var addCmd = &cobra.Command{
+	Use:   "add [title]",
+	Short: "Add a new item",
+	Args:  cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cwd, _ := os.Getwd()
+		s := store.NewStore(filepath.Join(cwd, ".pm"))
+		title := ""
+		if len(args) == 1 {
+			title = args[0]
+		} else {
+			return fmt.Errorf("title required (TUI not yet implemented)")
+		}
+		item := s.NewItem(title, "")
+		if err := item.Save(s); err != nil {
+			return err
+		}
+		fmt.Printf("Added [#%d] %s\n", item.ID, item.Title)
+		return nil
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(addCmd)
 }
 
 func main() {
