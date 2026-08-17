@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/chaos/pj/internal/store"
@@ -82,10 +85,96 @@ var listCmd = &cobra.Command{
 	},
 }
 
+var doneCmd = &cobra.Command{
+	Use:   "done [id]",
+	Short: "Mark item as done",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		id, err := strconv.Atoi(args[0])
+		if err != nil {
+			return err
+		}
+		cwd, _ := os.Getwd()
+		s := store.NewStore(filepath.Join(cwd, ".pm"))
+		items, _ := s.LoadItems()
+		for i := range items {
+			if items[i].ID == id {
+				items[i].State = "done"
+				items[i].Updated = time.Now().Format(time.RFC3339)
+				if err := items[i].Save(s); err != nil {
+					return err
+				}
+				fmt.Printf("[#%d] marked as done\n", id)
+				return nil
+			}
+		}
+		return fmt.Errorf("item %d not found", id)
+	},
+}
+
+var statusCmd = &cobra.Command{
+	Use:   "status",
+	Short: "Check project health",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cwd, _ := os.Getwd()
+		s := store.NewStore(filepath.Join(cwd, ".pm"))
+		items, _ := s.LoadItems()
+		seen := make(map[int]int)
+		for _, it := range items {
+			seen[it.ID]++
+		}
+		conflicts := 0
+		for id, count := range seen {
+			if count > 1 {
+				fmt.Printf("CONFLICT: ID %d appears %d times\n", id, count)
+				conflicts++
+			}
+		}
+		if conflicts > 0 {
+			fmt.Printf("\nRun `pj renum` to fix %d conflict(s)\n", conflicts)
+			return fmt.Errorf("conflicts detected")
+		}
+		fmt.Println("Project healthy")
+		return nil
+	},
+}
+
+var renumCmd = &cobra.Command{
+	Use:   "renum",
+	Short: "Re-number items by creation time",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cwd, _ := os.Getwd()
+		s := store.NewStore(filepath.Join(cwd, ".pm"))
+		items, _ := s.LoadItems()
+
+		// Delete all existing item files first to avoid orphans
+		itemsDir := s.ItemsDir()
+		entries, _ := os.ReadDir(itemsDir)
+		for _, e := range entries {
+			if !e.IsDir() {
+				os.Remove(filepath.Join(itemsDir, e.Name()))
+			}
+		}
+
+		sort.Slice(items, func(i, j int) bool {
+			return items[i].Created < items[j].Created
+		})
+		for i := range items {
+			items[i].ID = i + 1
+			items[i].Save(s)
+		}
+		fmt.Printf("Renumbered %d items\n", len(items))
+		return nil
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(listCmd)
+	rootCmd.AddCommand(doneCmd)
+	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(renumCmd)
 }
 
 func main() {
