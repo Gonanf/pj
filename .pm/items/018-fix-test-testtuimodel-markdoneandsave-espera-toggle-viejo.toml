@@ -1,0 +1,6 @@
+id = 18
+title = 'Fix test: TestTUIModel_MarkDoneAndSave espera toggle viejo'
+description = 'El test asume espacio toggle (todo→done→todo) pero ahora cicla (todo→in progress→testing→...). Actualizar test para reflejar NextState.'
+state = 'todo'
+created = '2026-08-17T14:40:19-03:00'
+updated = '2026-08-17T14:40:19-03:00'

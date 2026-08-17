@@ -102,13 +102,25 @@ func TestTUIModel_MarkDoneAndSave(t *testing.T) {
 
 	m := New(items, dir)
 
-	// Press space to mark done
+	// Press space: todo -> in progress (first step of the cycle)
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeySpace})
 	m = updated.(Model)
 
 	item := m.Items()[m.Cursor()]
+	if item.State != "in progress" {
+		t.Errorf("expected state 'in progress' after space, got '%s'", item.State)
+	}
+
+	// Keep pressing space until reaching done
+	steps := 0
+	for item.State != "done" && steps < len(model.ValidStates) {
+		updated, _ = m.Update(tea.KeyMsg{Type: tea.KeySpace})
+		m = updated.(Model)
+		item = m.Items()[m.Cursor()]
+		steps++
+	}
 	if item.State != "done" {
-		t.Errorf("expected state 'done', got '%s'", item.State)
+		t.Fatalf("expected to reach 'done' cycling, got '%s' after %d steps", item.State, steps)
 	}
 
 	// Verify saved file reflects 'done'
@@ -121,13 +133,14 @@ func TestTUIModel_MarkDoneAndSave(t *testing.T) {
 		t.Errorf("saved file does not contain state = done: %s", string(data))
 	}
 
-	// Press space again to toggle
-	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeySpace})
-	m = updated.(Model)
-
-	item = m.Items()[m.Cursor()]
-	if item.State != "todo" {
-		t.Errorf("expected state 'todo' after toggle, got '%s'", item.State)
+	// Verify NextState cycles correctly: len(ValidStates) presses return to the start
+	start := "todo"
+	s := start
+	for i := 0; i < len(model.ValidStates); i++ {
+		s = model.NextState(s)
+	}
+	if s != start {
+		t.Errorf("expected NextState to cycle back to %q, got %q", start, s)
 	}
 }
 
