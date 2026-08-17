@@ -53,9 +53,39 @@ var addCmd = &cobra.Command{
 	},
 }
 
+var listCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List all items",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cwd, _ := os.Getwd()
+		s := store.NewStore(filepath.Join(cwd, ".pm"))
+		items, err := s.LoadItems()
+		if err != nil {
+			return err
+		}
+		for _, it := range items {
+			stateColor := map[string]string{
+				"todo":        "\033[37m",
+				"in progress": "\033[33m",
+				"done":        "\033[32m",
+				"blocked":     "\033[31m",
+				"discarded":   "\033[30m",
+				"testing":     "\033[35m",
+			}
+			c := stateColor[it.State]
+			if c == "" {
+				c = "\033[37m"
+			}
+			fmt.Printf("%s[%d] %s — %s\033[0m\n", c, it.ID, it.Title, it.State)
+		}
+		return nil
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(addCmd)
+	rootCmd.AddCommand(listCmd)
 }
 
 func main() {
