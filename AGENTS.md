@@ -140,3 +140,10 @@ go test ./...              # Tests
 - Dueño del proyecto: Chaos
 - Agent principal: Kateto (opina, no escribe código directamente)
 - Cuando haya grietas de diseño importantes, se discuten en blog antes de codear
+
+## Seguridad: pre-commit hook (gitleaks)
+
+El repo usa `core.hooksPath = .githooks` con un hook pre-commit de gitleaks:
+los commits con secretos detectados se bloquean. Harness: si el hook te
+bloquea, NO uses --no-verify; avisá al usuario. Nunca commitees archivos
+de datos/transcripciones (data/, *.csv grandes) sin preguntar antes.
