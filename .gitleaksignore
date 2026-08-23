@@ -1,0 +1,2 @@
+# Exclusiones de gitleaks para pj — solo falsos positivos documentados.
+# Formato: regex sobre el contenido. No agregar reglas "por las dudas".
