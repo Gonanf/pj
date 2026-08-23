@@ -3,15 +3,19 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/spf13/cobra"
+	"github.com/chaos/pj/internal/model"
 	"github.com/chaos/pj/internal/store"
 	"github.com/chaos/pj/internal/tui"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/pelletier/go-toml/v2"
+	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
@@ -115,6 +119,68 @@ var doneCmd = &cobra.Command{
 	},
 }
 
+var editCmd = &cobra.Command{
+	Use:   "edit [id]",
+	Short: "Open an item in $EDITOR",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		id, err := strconv.Atoi(args[0])
+		if err != nil {
+			return err
+		}
+		cwd, _ := os.Getwd()
+		s := store.NewStore(filepath.Join(cwd, ".pm"))
+		orig, err := s.FindItem(id)
+		if err != nil {
+			return err
+		}
+
+		data, err := toml.Marshal(orig)
+		if err != nil {
+			return err
+		}
+		tmp, err := os.CreateTemp("", "pj-edit-*.toml")
+		if err != nil {
+			return err
+		}
+		defer os.Remove(tmp.Name())
+		if _, err := tmp.Write(data); err != nil {
+			tmp.Close()
+			return err
+		}
+		if err := tmp.Close(); err != nil {
+			return err
+		}
+
+		// ponytail: EDITOR split on spaces; quoted paths with spaces break —
+		// switch to shellwords if that ever matters.
+		parts := strings.Fields(os.Getenv("EDITOR"))
+		if len(parts) == 0 {
+			parts = []string{"vi"}
+		}
+		e := exec.Command(parts[0], parts[1:]...)
+		e.Args = append(e.Args, tmp.Name())
+		e.Stdin, e.Stdout, e.Stderr = os.Stdin, os.Stdout, os.Stderr
+		if err := e.Run(); err != nil {
+			return fmt.Errorf("editor %q failed: %w", parts[0], err)
+		}
+
+		var edited model.Item
+		raw, err := os.ReadFile(tmp.Name())
+		if err != nil {
+			return err
+		}
+		if err := toml.Unmarshal(raw, &edited); err != nil {
+			return fmt.Errorf("invalid TOML after editing: %w", err)
+		}
+		if err := s.EditItem(id, &edited); err != nil {
+			return err
+		}
+		fmt.Printf("[#%d] updated\n", id)
+		return nil
+	},
+}
+
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Check project health",
@@ -196,6 +262,7 @@ func init() {
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(doneCmd)
+	rootCmd.AddCommand(editCmd)
 	rootCmd.AddCommand(showCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(renumCmd)

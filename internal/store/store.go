@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/chaos/pj/internal/model"
@@ -81,4 +82,77 @@ func (s *Store) LoadItems() ([]model.Item, error) {
 	}
 	sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })
 	return items, nil
+}
+
+// itemFile returns the path of the file holding the item with the given ID.
+// Filenames embed a slug we can't recompute here (model.slug is unexported),
+// so files are located by their zero-padded ID prefix.
+func (s *Store) itemFile(id int) (string, error) {
+	matches, err := filepath.Glob(filepath.Join(s.ItemsDir(), fmt.Sprintf("%03d-*.toml", id)))
+	if err != nil {
+		return "", err
+	}
+	switch len(matches) {
+	case 1:
+		return matches[0], nil
+	case 0:
+		return "", fmt.Errorf("item %d not found", id)
+	default:
+		return "", fmt.Errorf("item %d has %d files, run `pj status`", id, len(matches))
+	}
+}
+
+// FindItem returns the item with the given ID.
+func (s *Store) FindItem(id int) (*model.Item, error) {
+	p, err := s.itemFile(id)
+	if err != nil {
+		return nil, err
+	}
+	data, err := os.ReadFile(p)
+	if err != nil {
+		return nil, err
+	}
+	var it model.Item
+	if err := toml.Unmarshal(data, &it); err != nil {
+		return nil, fmt.Errorf("%s: %w", p, err)
+	}
+	return &it, nil
+}
+
+// DeleteItem removes the file holding the item with the given ID.
+func (s *Store) DeleteItem(id int) error {
+	p, err := s.itemFile(id)
+	if err != nil {
+		return err
+	}
+	return os.Remove(p)
+}
+
+// EditItem validates state and title before touching disk, saves edited
+// (renaming the file when the title changes), and always refreshes `updated`.
+// The old file is removed only after the renamed one was written.
+func (s *Store) EditItem(id int, edited *model.Item) error {
+	orig, err := s.FindItem(id)
+	if err != nil {
+		return err
+	}
+	oldPath, err := s.itemFile(id)
+	if err != nil {
+		return err
+	}
+	edited.ID = id
+	if !model.IsValidState(edited.State) {
+		return fmt.Errorf("invalid state %q (valid: %v)", edited.State, model.ValidStates)
+	}
+	if strings.TrimSpace(edited.Title) == "" {
+		return fmt.Errorf("title cannot be empty")
+	}
+	edited.Updated = time.Now().Format(time.RFC3339)
+	if err := edited.Save(s); err != nil {
+		return err
+	}
+	if edited.Title != orig.Title {
+		return os.Remove(oldPath)
+	}
+	return nil
 }
