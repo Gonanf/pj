@@ -15,6 +15,7 @@ type Item struct {
 	Title       string `toml:"title"`
 	Description string `toml:"description"`
 	State       string `toml:"state"`
+	Type        string `toml:"type,omitempty"`
 	Created     string `toml:"created"`
 	Updated     string `toml:"updated"`
 }
@@ -45,6 +46,23 @@ var ValidStates = []string{
 	"closed",
 	"in specification",
 	"discarded",
+}
+
+// ValidTypes son los tipos de tarea válidos.
+var ValidTypes = []string{"feat", "chore", "fix", "docs"}
+
+// IsValidType verifica si un string es un tipo válido. Vacío es válido
+// (backward compatible con items que no tienen tipo).
+func IsValidType(s string) bool {
+	if s == "" {
+		return true
+	}
+	for _, v := range ValidTypes {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }
 
 // IsValidState verifica si un string es un estado válido.

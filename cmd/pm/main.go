@@ -54,7 +54,12 @@ var addCmd = &cobra.Command{
 		} else {
 			return fmt.Errorf("title required")
 		}
+		typ, _ := cmd.Flags().GetString("type")
+		if !model.IsValidType(typ) {
+			return fmt.Errorf("invalid type %q (valid types: %s)", typ, strings.Join(model.ValidTypes, ", "))
+		}
 		item := s.NewItem(title, desc)
+		item.Type = typ
 		if err := item.Save(s); err != nil {
 			return err
 		}
@@ -86,7 +91,21 @@ var listCmd = &cobra.Command{
 			if c == "" {
 				c = "\033[37m"
 			}
-			fmt.Printf("%s[%d] %s — %s\033[0m\n", c, it.ID, it.Title, it.State)
+			typeStr := ""
+			if it.Type != "" {
+				typeColor := map[string]string{
+					"feat":  "\033[32m",
+					"fix":   "\033[31m",
+					"chore": "\033[33m",
+					"docs":  "\033[34m",
+				}
+				tc, ok := typeColor[it.Type]
+				if !ok {
+					tc = "\033[37m"
+				}
+				typeStr = fmt.Sprintf("%s[%s]\033[0m%s ", tc, it.Type, c)
+			}
+			fmt.Printf("%s[%d] %s%s — %s\033[0m\n", c, it.ID, typeStr, it.Title, it.State)
 		}
 		return nil
 	},
@@ -258,6 +277,7 @@ var showCmd = &cobra.Command{
 
 func init() {
 	addCmd.Flags().StringP("description", "d", "", "description of the item (use single quotes for $ and special chars)")
+	addCmd.Flags().StringP("type", "t", "", "item type: feat, chore, fix, docs")
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(listCmd)

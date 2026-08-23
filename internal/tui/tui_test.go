@@ -221,3 +221,31 @@ func TestTUIModel_Empty(t *testing.T) {
 	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeySpace})
 	m = updated.(Model)
 }
+
+func TestRenderShowsTypeBracket(t *testing.T) {
+	items := []model.Item{
+		{ID: 1, Title: "Fix crash", State: "todo", Type: "fix"},
+	}
+	m := New(items)
+	view := m.View()
+	if !strings.Contains(view, "[fix]") {
+		t.Errorf("view missing type bracket '[fix]', got:\n%s", view)
+	}
+	if !strings.Contains(view, "Fix crash") {
+		t.Errorf("view missing item title, got:\n%s", view)
+	}
+}
+
+func TestRenderWithoutTypeOmitsBracket(t *testing.T) {
+	items := []model.Item{
+		{ID: 1, Title: "Plain task", State: "todo"},
+	}
+	m := New(items)
+	view := m.View()
+	for _, typ := range model.ValidTypes {
+		bracket := "[" + typ + "]"
+		if strings.Contains(view, bracket) {
+			t.Errorf("view should not contain type bracket %q when item has no type, got:\n%s", bracket, view)
+		}
+	}
+}
