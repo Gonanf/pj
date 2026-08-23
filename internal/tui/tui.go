@@ -52,6 +52,13 @@ var (
 	}
 
 	defaultItemStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("15"))
+
+	typeStyles = map[string]lipgloss.Style{
+		"feat":  lipgloss.NewStyle().Foreground(lipgloss.Color("2")), // green
+		"chore": lipgloss.NewStyle().Foreground(lipgloss.Color("3")), // yellow
+		"fix":   lipgloss.NewStyle().Foreground(lipgloss.Color("1")), // red
+		"docs":  lipgloss.NewStyle().Foreground(lipgloss.Color("4")), // blue
+	}
 )
 
 type tuiModel struct {
@@ -253,7 +260,15 @@ func (m Model) View() string {
 				st = defaultItemStyle
 			}
 
-			itemText := fmt.Sprintf("%s [#%d] %s", checkmark, it.ID, it.Title)
+			itemText := fmt.Sprintf("%s [#%d]", checkmark, it.ID)
+			if it.Type != "" {
+				if ts, ok := typeStyles[it.Type]; ok {
+					itemText += " " + ts.Render("["+it.Type+"]")
+				} else {
+					itemText += " [" + it.Type + "]"
+				}
+			}
+			itemText += " " + it.Title
 			if i == m.cursor {
 				itemText = selectedItemStyle.Render(itemText)
 			}
