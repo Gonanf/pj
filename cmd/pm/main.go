@@ -6,10 +6,13 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
+	toml "github.com/pelletier/go-toml/v2"
+	"github.com/chaos/pj/internal/model"
 	"github.com/chaos/pj/internal/store"
 	"github.com/chaos/pj/internal/tui"
 )
@@ -171,6 +174,113 @@ var renumCmd = &cobra.Command{
 	},
 }
 
+var finishCmd = &cobra.Command{
+	Use:   "finish",
+	Short: "Print a closing summary of the project",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		save, _ := cmd.Flags().GetBool("save")
+		return runFinish(save)
+	},
+}
+
+// Contract from spec T3: finish is read-only over .pm and never mutates items.
+func runFinish(save bool) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	pmDir := filepath.Join(cwd, ".pm")
+	name, err := projectName(pmDir)
+	if err != nil {
+		return err
+	}
+	items, err := store.NewStore(pmDir).LoadItems()
+	if err != nil {
+		return err
+	}
+	summary := buildSummary(name, items, time.Now())
+	fmt.Print(summary)
+	if !save {
+		return nil
+	}
+	return os.WriteFile(filepath.Join(pmDir, "SUMMARY.md"), []byte(summary), 0o644)
+}
+
+func projectName(pmDir string) (string, error) {
+	data, err := os.ReadFile(filepath.Join(pmDir, "project.toml"))
+	if err != nil {
+		return "", fmt.Errorf("load project: %w", err)
+	}
+	var p struct {
+		Name string `toml:"name"`
+	}
+	if err := toml.Unmarshal(data, &p); err != nil {
+		return "", fmt.Errorf("parse project.toml: %w", err)
+	}
+	if p.Name == "" {
+		p.Name = "unnamed"
+	}
+	return p.Name, nil
+}
+
+var openStates = map[string]bool{
+	"todo":             true,
+	"in progress":      true,
+	"testing":          true,
+	"blocked":          true,
+	"in specification": true,
+}
+
+func buildSummary(name string, items []model.Item, today time.Time) string {
+	counts := make(map[string]int)
+	var oldest time.Time
+	haveOldest := false
+	open := []model.Item{}
+	for _, it := range items {
+		counts[it.State]++
+		if ct, err := time.Parse(time.RFC3339, it.Created); err == nil && (!haveOldest || ct.Before(oldest)) {
+			oldest, haveOldest = ct, true
+		}
+		if openStates[it.State] {
+			open = append(open, it)
+		}
+	}
+
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("Project: %s\n\n", name))
+	b.WriteString("Items by state:\n")
+	for _, st := range model.ValidStates {
+		b.WriteString(fmt.Sprintf("  %s: %d\n", st, counts[st]))
+	}
+
+	doneish := counts["done"] + counts["closed"]
+	active := len(items) - counts["discarded"]
+	pct := 0
+	if active > 0 {
+		pct = doneish * 100 / active
+	}
+	b.WriteString(fmt.Sprintf("\nCompletion: %d%% (%d of %d active)\n", pct, doneish, active))
+
+	if !haveOldest {
+		b.WriteString("\nDuration: n/a\n")
+	} else {
+		days := int(today.Sub(oldest).Hours() / 24)
+		if days < 0 {
+			days = 0
+		}
+		b.WriteString(fmt.Sprintf("\nDuration: %d days\n", days))
+	}
+
+	b.WriteString("\nOpen items (not finished):\n")
+	if len(open) == 0 {
+		b.WriteString("  (none)\n")
+	}
+	for _, it := range open {
+		b.WriteString(fmt.Sprintf("  [%d] %s — %s\n", it.ID, it.Title, it.State))
+	}
+	return b.String()
+}
+
 var showCmd = &cobra.Command{
 	Use:   "show",
 	Short: "Show interactive TUI with progress bar",
@@ -199,6 +309,8 @@ func init() {
 	rootCmd.AddCommand(showCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(renumCmd)
+	finishCmd.Flags().Bool("save", false, "write the summary to .pm/SUMMARY.md")
+	rootCmd.AddCommand(finishCmd)
 }
 
 func main() {
