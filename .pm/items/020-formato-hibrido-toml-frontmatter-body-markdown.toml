@@ -1,6 +1,0 @@
-id = 20
-title = 'Formato hibrido TOML frontmatter + body markdown'
-description = 'Items con cuerpo markdown libre despues del frontmatter. Migracion transparente de .toml legacy. Spec preliminar en .pm/design.md y notas en esta descripcion. Decision del dueno: post-integracion (ya integrado).'
-state = 'todo'
-created = '2026-08-22T23:29:35-03:00'
-updated = '2026-08-22T23:29:35-03:00'

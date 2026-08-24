@@ -68,17 +68,22 @@ func (s *Store) LoadItems() ([]model.Item, error) {
 	if err != nil {
 		return nil, err
 	}
+	mdFiles, err := filepath.Glob(filepath.Join(s.ItemsDir(), "*.md"))
+	if err != nil {
+		return nil, err
+	}
+	files = append(files, mdFiles...)
 	items := make([]model.Item, 0, len(files))
 	for _, f := range files {
-		var it model.Item
 		data, err := os.ReadFile(f)
 		if err != nil {
 			return nil, err
 		}
-		if err := toml.Unmarshal(data, &it); err != nil {
+		it, err := model.UnmarshalItem(data)
+		if err != nil {
 			return nil, fmt.Errorf("%s: %w", f, err)
 		}
-		items = append(items, it)
+		items = append(items, *it)
 	}
 	sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })
 	return items, nil
@@ -92,6 +97,11 @@ func (s *Store) itemFile(id int) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	mdMatches, err := filepath.Glob(filepath.Join(s.ItemsDir(), fmt.Sprintf("%03d-*.md", id)))
+	if err != nil {
+		return "", err
+	}
+	matches = append(matches, mdMatches...)
 	switch len(matches) {
 	case 1:
 		return matches[0], nil
@@ -112,11 +122,11 @@ func (s *Store) FindItem(id int) (*model.Item, error) {
 	if err != nil {
 		return nil, err
 	}
-	var it model.Item
-	if err := toml.Unmarshal(data, &it); err != nil {
+	it, err := model.UnmarshalItem(data)
+	if err != nil {
 		return nil, fmt.Errorf("%s: %w", p, err)
 	}
-	return &it, nil
+	return it, nil
 }
 
 // DeleteItem removes the file holding the item with the given ID.
@@ -136,8 +146,8 @@ func (s *Store) EditItem(id int, edited *model.Item) error {
 	if err != nil {
 		return err
 	}
-	oldPath, err := s.itemFile(id)
-	if err != nil {
+	_ = orig // kept for API symmetry; Save() handles rename cleanup
+	if _, err := s.itemFile(id); err != nil {
 		return err
 	}
 	edited.ID = id
@@ -151,8 +161,6 @@ func (s *Store) EditItem(id int, edited *model.Item) error {
 	if err := edited.Save(s); err != nil {
 		return err
 	}
-	if edited.Title != orig.Title {
-		return os.Remove(oldPath)
-	}
+	// Save() already removed the old-named/legacy file; nothing else to do.
 	return nil
 }

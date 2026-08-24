@@ -124,7 +124,7 @@ func TestTUIModel_MarkDoneAndSave(t *testing.T) {
 	}
 
 	// Verify saved file reflects 'done'
-	savedPath := filepath.Join(tempDir, "001-first-task.toml")
+	savedPath := filepath.Join(tempDir, "001-first-task.md")
 	data, err := os.ReadFile(savedPath)
 	if err != nil {
 		t.Fatalf("failed to read saved file: %v", err)

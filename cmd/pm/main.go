@@ -154,11 +154,11 @@ var editCmd = &cobra.Command{
 			return err
 		}
 
-		data, err := toml.Marshal(orig)
+		data, err := model.MarshalItem(orig)
 		if err != nil {
 			return err
 		}
-		tmp, err := os.CreateTemp("", "pj-edit-*.toml")
+		tmp, err := os.CreateTemp("", "pj-edit-*.md")
 		if err != nil {
 			return err
 		}
@@ -184,15 +184,15 @@ var editCmd = &cobra.Command{
 			return fmt.Errorf("editor %q failed: %w", parts[0], err)
 		}
 
-		var edited model.Item
 		raw, err := os.ReadFile(tmp.Name())
 		if err != nil {
 			return err
 		}
-		if err := toml.Unmarshal(raw, &edited); err != nil {
-			return fmt.Errorf("invalid TOML after editing: %w", err)
+		edited, err := model.UnmarshalItem(raw)
+		if err != nil {
+			return fmt.Errorf("invalid item after editing: %w", err)
 		}
-		if err := s.EditItem(id, &edited); err != nil {
+		if err := s.EditItem(id, edited); err != nil {
 			return err
 		}
 		fmt.Printf("[#%d] updated\n", id)

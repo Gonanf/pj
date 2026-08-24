@@ -40,7 +40,7 @@ func TestItemSaveFilename(t *testing.T) {
 	if err := item.Save(stubDir(dir)); err != nil {
 		t.Fatal(err)
 	}
-	want := filepath.Join(dir, "003-hola-mundo.toml")
+	want := filepath.Join(dir, "003-hola-mundo.md")
 	if _, err := os.Stat(want); err != nil {
 		t.Errorf("expected %s: %v", want, err)
 	}

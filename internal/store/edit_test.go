@@ -36,8 +36,8 @@ func TestEditRenamesFileOnTitleChange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	oldPath := filepath.Join(s.ItemsDir(), "001-old-title.toml")
-	newPath := filepath.Join(s.ItemsDir(), "001-new-title-here.toml")
+	oldPath := filepath.Join(s.ItemsDir(), "001-old-title.md")
+	newPath := filepath.Join(s.ItemsDir(), "001-new-title-here.md")
 	if _, err := os.Stat(oldPath); !os.IsNotExist(err) {
 		t.Fatalf("old file should be gone after rename: %s", oldPath)
 	}
@@ -63,7 +63,10 @@ func TestEditRenamesFileOnTitleChange(t *testing.T) {
 
 func TestEditRejectsInvalidState(t *testing.T) {
 	s, orig := newEditFixture(t)
-	path := filepath.Join(s.ItemsDir(), "001-old-title.toml")
+	path, err := s.itemFile(1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	before, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
