@@ -82,3 +82,15 @@ func TestSaveWritesHybridMD(t *testing.T) {
 		t.Errorf("expected .md file, got %s", entries[0])
 	}
 }
+
+func TestUnmarshalHybridCRLF(t *testing.T) {
+	raw := "+++\r\nid = 8\r\ntitle = 'Windows CRLF'\r\ndescription = 'test'\r\nstate = 'todo'\r\ntype = 'feat'\r\ncreated = '2026-01-01T00:00:00Z'\r\nupdated = '2026-01-01T00:00:00Z'\r\n+++\r\n\r\nSome body with CRLF.\r\n"
+	it, err := UnmarshalItem([]byte(raw))
+	if err != nil {
+		t.Fatalf("failed to unmarshal CRLF hybrid item: %v", err)
+	}
+	if it.ID != 8 || it.Title != "Windows CRLF" || it.Type != "feat" {
+		t.Errorf("bad parse of CRLF item: %+v", it)
+	}
+}
+

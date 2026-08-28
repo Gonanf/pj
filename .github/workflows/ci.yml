@@ -46,8 +46,14 @@ jobs:
       - name: Smoke test binary
         shell: bash
         run: |
-          ./pj${{ matrix.os == 'windows-latest' && '.exe' || '' }} --help
-          ./pj${{ matrix.os == 'windows-latest' && '.exe' || '' }} init
-          ./pj${{ matrix.os == 'windows-latest' && '.exe' || '' }} add "Smoke test item" -t feat
-          ./pj${{ matrix.os == 'windows-latest' && '.exe' || '' }} list
-          ./pj${{ matrix.os == 'windows-latest' && '.exe' || '' }} status
+          BIN="$(pwd)/pj${{ matrix.os == 'windows-latest' && '.exe' || '' }}"
+          "$BIN" --help
+          "$BIN" list
+          "$BIN" status
+          SMOKE_DIR="${RUNNER_TEMP:-/tmp}/pj-smoke"
+          mkdir -p "$SMOKE_DIR"
+          cd "$SMOKE_DIR"
+          "$BIN" init
+          "$BIN" add "Smoke test item" -t feat
+          "$BIN" list
+          "$BIN" status

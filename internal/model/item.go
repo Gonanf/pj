@@ -80,9 +80,9 @@ func MarshalItem(i *Item) ([]byte, error) {
 // or legacy plain-TOML files. Body is empty for legacy items.
 func UnmarshalItem(data []byte) (*Item, error) {
 	var it Item
-	text := string(data)
+	text := strings.ReplaceAll(string(data), "\r\n", "\n")
 	if !strings.HasPrefix(text, fmDelim+"\n") && text != fmDelim {
-		if err := toml.Unmarshal(data, &it); err != nil {
+		if err := toml.Unmarshal([]byte(text), &it); err != nil {
 			return nil, err
 		}
 		return &it, nil
