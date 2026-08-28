@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -16,19 +17,81 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-var bin string
+var (
+	bin         string
+	mockEditBin string
+)
+
+const mockEditCode = `package main
+
+import (
+	"fmt"
+	"os"
+	"strings"
+)
+
+func main() {
+	if len(os.Args) < 2 {
+		fmt.Fprintln(os.Stderr, "no file provided")
+		os.Exit(1)
+	}
+	filePath := os.Args[len(os.Args)-1]
+
+	if appendText := os.Getenv("MOCK_EDIT_APPEND"); appendText != "" {
+		data, _ := os.ReadFile(filePath)
+		_ = os.WriteFile(filePath, []byte(string(data)+appendText), 0o644)
+		return
+	}
+
+	if writeText := os.Getenv("MOCK_EDIT_WRITE"); writeText != "" {
+		_ = os.WriteFile(filePath, []byte(writeText), 0o644)
+		return
+	}
+
+	find := os.Getenv("MOCK_EDIT_FIND")
+	replace := os.Getenv("MOCK_EDIT_REPLACE")
+	if find != "" {
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		newText := strings.ReplaceAll(string(data), find, replace)
+		if err := os.WriteFile(filePath, []byte(newText), 0o644); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
+}
+`
 
 func TestMain(m *testing.M) {
 	dir, err := os.MkdirTemp("", "pj-e2e-bin")
 	if err != nil {
 		panic(err)
 	}
-	bin = filepath.Join(dir, "pj")
+	exe := ""
+	if runtime.GOOS == "windows" {
+		exe = ".exe"
+	}
+	bin = filepath.Join(dir, "pj"+exe)
 	build := exec.Command("go", "build", "-o", bin, "./cmd/pm")
 	build.Dir = repoRoot()
 	if out, err := build.CombinedOutput(); err != nil {
 		panic("build failed: " + string(out))
 	}
+
+	mockEditSrc := filepath.Join(dir, "mockedit.go")
+	if err := os.WriteFile(mockEditSrc, []byte(mockEditCode), 0o644); err != nil {
+		panic(err)
+	}
+	mockEditBin = filepath.Join(dir, "mockedit"+exe)
+	buildMock := exec.Command("go", "build", "-o", mockEditBin, mockEditSrc)
+	if out, err := buildMock.CombinedOutput(); err != nil {
+		panic("build mockedit failed: " + string(out))
+	}
+
 	code := m.Run()
 	os.RemoveAll(dir)
 	os.Exit(code)
@@ -53,7 +116,7 @@ func run(t *testing.T, dir string, env map[string]string, args ...string) string
 	t.Helper()
 	cmd := exec.Command(bin, args...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "EDITOR=vi")
+	cmd.Env = append(os.Environ(), "EDITOR="+mockEditBin)
 	for k, v := range env {
 		cmd.Env = append(cmd.Env, k+"="+v)
 	}
@@ -108,8 +171,8 @@ func TestCLIEndToEndFlow(t *testing.T) {
 		t.Errorf("status not healthy:\n%s", status)
 	}
 
-	// edit via $EDITOR (sed stands in for a real editor): change title.
-	run(t, dir, map[string]string{"EDITOR": "sed -i s/Bugfix/Renamed/"}, "edit", "2")
+	// edit via $EDITOR: change title.
+	run(t, dir, map[string]string{"MOCK_EDIT_FIND": "Bugfix", "MOCK_EDIT_REPLACE": "Renamed"}, "edit", "2")
 	list = run(t, dir, nil, "list")
 	if !strings.Contains(list, "Renamed thing") {
 		t.Errorf("edit did not persist new title:\n%s", list)
@@ -146,7 +209,7 @@ func TestEditRejectsInvalidStateEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	out, err := runErr(dir, map[string]string{"EDITOR": "sed -i s/todo/banana/"}, "edit", "1")
+	out, err := runErr(dir, map[string]string{"MOCK_EDIT_FIND": "todo", "MOCK_EDIT_REPLACE": "banana"}, "edit", "1")
 	if err == nil || !strings.Contains(out, "banana") {
 		t.Fatalf("expected invalid-state error mentioning banana, got err=%v out=%s", err, out)
 	}
@@ -176,7 +239,7 @@ func errOutput(err error) []byte {
 func runErr(dir string, env map[string]string, args ...string) (string, error) {
 	cmd := exec.Command(bin, args...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "EDITOR=vi")
+	cmd.Env = append(os.Environ(), "EDITOR="+mockEditBin)
 	for k, v := range env {
 		cmd.Env = append(cmd.Env, k+"="+v)
 	}
@@ -218,11 +281,9 @@ func TestAddInteractiveToEndToEnd(t *testing.T) {
 	dir := newProject(t)
 
 	// Test 1: pj add "Title" -i with mock editor appending description
-	ed1 := filepath.Join(dir, "ed1.sh")
-	if err := os.WriteFile(ed1, []byte("#!/bin/sh\nprintf \"\\nCustom detailed description\\n# comment to ignore\\n\" >> \"$1\"\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	run(t, dir, map[string]string{"EDITOR": ed1}, "add", "Item with interactive desc", "-i")
+	run(t, dir, map[string]string{
+		"MOCK_EDIT_APPEND": "\nCustom detailed description\n# comment to ignore\n",
+	}, "add", "Item with interactive desc", "-i")
 
 	s := store.NewStore(filepath.Join(dir, ".pm"))
 	item, err := s.FindItem(1)
@@ -237,11 +298,9 @@ func TestAddInteractiveToEndToEnd(t *testing.T) {
 	}
 
 	// Test 2: pj add -i with mock editor providing both title and description
-	ed2 := filepath.Join(dir, "ed2.sh")
-	if err := os.WriteFile(ed2, []byte("#!/bin/sh\nprintf \"feat: full interactive task\\n\\nBody of full interactive task\\n\" > \"$1\"\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	run(t, dir, map[string]string{"EDITOR": ed2}, "add", "-i")
+	run(t, dir, map[string]string{
+		"MOCK_EDIT_WRITE": "feat: full interactive task\n\nBody of full interactive task\n",
+	}, "add", "-i")
 
 	item2, err := s.FindItem(2)
 	if err != nil {
