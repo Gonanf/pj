@@ -65,3 +65,37 @@ func TestInvalidTypeRejected(t *testing.T) {
 		}
 	}
 }
+
+func TestDetectType(t *testing.T) {
+	tests := []struct {
+		title    string
+		expected string
+	}{
+		{"feat: add new feature", "feat"},
+		{"feat(ui): add button", "feat"},
+		{"feat(core/engine): fast parser", "feat"},
+		{"feat!: breaking change", "feat"},
+		{"feat(api)!: breaking api change", "feat"},
+		{"fix: fix crash", "fix"},
+		{"fix(store): handle empty dir", "fix"},
+		{"chore: update dependencies", "chore"},
+		{"chore(deps): update go-toml", "chore"},
+		{"docs: update readme", "docs"},
+		{"docs(setup): install guide", "docs"},
+		{"FEAT: uppercase feat", "feat"},
+		{"Fix(UI): mixed case fix", "fix"},
+		{"Regular title without prefix", ""},
+		{"feat without colon", ""},
+		{"unknown: title with invalid type", ""},
+		{"refactor(core): unsupported type", ""},
+		{"  feat: leading spaces  ", "feat"},
+	}
+
+	for _, tc := range tests {
+		got := DetectType(tc.title)
+		if got != tc.expected {
+			t.Errorf("DetectType(%q) = %q, want %q", tc.title, got, tc.expected)
+		}
+	}
+}
+

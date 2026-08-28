@@ -82,9 +82,16 @@ func TestCLIEndToEndFlow(t *testing.T) {
 
 	run(t, dir, nil, "add", "First feature", "-d", "does things", "-t", "feat")
 	run(t, dir, nil, "add", "Bugfix thing", "-t", "fix")
+	run(t, dir, nil, "add", "feat(cli): auto detected feat")
+	run(t, dir, nil, "add", "chore: auto detected chore")
 
 	list := run(t, dir, nil, "list")
-	for _, want := range []string{"[1] [feat] First feature", "[2] [fix] Bugfix thing"} {
+	for _, want := range []string{
+		"[1] [feat] First feature",
+		"[2] [fix] Bugfix thing",
+		"[3] [feat] feat(cli): auto detected feat",
+		"[4] [chore] chore: auto detected chore",
+	} {
 		if !strings.Contains(list, want) {
 			t.Errorf("list missing %q:\n%s", want, list)
 		}

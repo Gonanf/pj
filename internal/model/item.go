@@ -135,6 +135,25 @@ func IsValidType(s string) bool {
 	return false
 }
 
+var typeRegex = regexp.MustCompile(`^(?i)([a-z]+)(?:\([^\)]*\))?!?:`)
+
+// DetectType detects a conventional commit type from a title (e.g. "feat: ...", "fix(scope): ...").
+// If the detected type matches one of ValidTypes, it is returned in lowercase; otherwise empty string is returned.
+func DetectType(title string) string {
+	m := typeRegex.FindStringSubmatch(strings.TrimSpace(title))
+	if len(m) < 2 {
+		return ""
+	}
+	candidate := strings.ToLower(m[1])
+	for _, v := range ValidTypes {
+		if v == candidate {
+			return candidate
+		}
+	}
+	return ""
+}
+
+
 // IsValidState verifica si un string es un estado válido.
 func IsValidState(s string) bool {
 	for _, v := range ValidStates {

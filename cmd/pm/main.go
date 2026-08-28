@@ -55,7 +55,9 @@ var addCmd = &cobra.Command{
 			return fmt.Errorf("title required")
 		}
 		typ, _ := cmd.Flags().GetString("type")
-		if !model.IsValidType(typ) {
+		if typ == "" {
+			typ = model.DetectType(title)
+		} else if !model.IsValidType(typ) {
 			return fmt.Errorf("invalid type %q (valid types: %s)", typ, strings.Join(model.ValidTypes, ", "))
 		}
 		item := s.NewItem(title, desc)
