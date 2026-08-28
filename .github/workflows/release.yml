@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v0.1.0)'
+        required: false
+        default: 'v0.1.0'
 
 permissions:
   contents: write
@@ -29,6 +34,23 @@ jobs:
         run: |
           go test -v -race ./...
           go vet ./...
+
+      - name: Ensure tag exists for release
+        run: |
+          if ! git describe --tags --exact-match HEAD 2>/dev/null; then
+            TAG="${{ github.event.inputs.tag }}"
+            if [ -z "$TAG" ]; then
+              TAG=$(git tag -l "v*" --sort=-v:refname | head -n1)
+              if [ -z "$TAG" ]; then
+                TAG="v0.1.0"
+              fi
+            fi
+            echo "Creating release tag: $TAG"
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG" -m "Release $TAG"
+            git push origin "$TAG" || true
+          fi
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
