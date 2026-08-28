@@ -59,14 +59,19 @@ var (
 		"fix":   lipgloss.NewStyle().Foreground(lipgloss.Color("1")), // red
 		"docs":  lipgloss.NewStyle().Foreground(lipgloss.Color("4")), // blue
 	}
+
+	descriptionStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("8")).
+				Italic(true)
 )
 
 type tuiModel struct {
-	items  []model.Item
-	cursor int
-	dir    model.Dir
-	width  int
-	height int
+	items            []model.Item
+	cursor           int
+	dir              model.Dir
+	width            int
+	height           int
+	showDescriptions bool
 }
 
 type Model = tuiModel
@@ -116,9 +121,10 @@ func New(items []model.Item, dir ...model.Dir) Model {
 	}
 
 	return tuiModel{
-		items:  copied,
-		cursor: 0,
-		dir:    d,
+		items:            copied,
+		cursor:           0,
+		dir:              d,
+		showDescriptions: true,
 	}
 }
 
@@ -145,6 +151,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "ctrl+c", "esc":
 			return m, tea.Quit
+		case "d":
+			m.showDescriptions = !m.showDescriptions
 		case "up", "k":
 			if m.cursor > 0 {
 				m.cursor--
@@ -273,12 +281,19 @@ func (m Model) View() string {
 				itemText = selectedItemStyle.Render(itemText)
 			}
 			b.WriteString(cursorStr + st.Render(itemText) + "\n")
+
+			if m.showDescriptions && strings.TrimSpace(it.Description) != "" {
+				descLines := strings.Split(strings.TrimSpace(it.Description), "\n")
+				for _, dl := range descLines {
+					b.WriteString("     " + descriptionStyle.Render(dl) + "\n")
+				}
+			}
 		}
 		b.WriteString("\n")
 	}
 
 	// Footer
-	b.WriteString(footerStyle.Render("↑/↓ navigate | space cycle state | 1-8 set state | q quit"))
+	b.WriteString(footerStyle.Render("↑/↓ navigate | space cycle state | 1-8 set state | d toggle desc | q quit"))
 
 	return b.String()
 }

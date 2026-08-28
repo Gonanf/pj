@@ -249,3 +249,37 @@ func TestRenderWithoutTypeOmitsBracket(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderShowsDescriptionAndToggles(t *testing.T) {
+	items := []model.Item{
+		{ID: 1, Title: "Task with desc", State: "todo", Description: "Detailed explanation of task"},
+		{ID: 2, Title: "Task without desc", State: "todo"},
+	}
+	m := New(items)
+
+	// By default, descriptions should be visible
+	view := m.View()
+	if !strings.Contains(view, "Detailed explanation of task") {
+		t.Errorf("view missing description text, got:\n%s", view)
+	}
+	if !strings.Contains(view, "d toggle desc") {
+		t.Errorf("footer missing 'd toggle desc', got:\n%s", view)
+	}
+
+	// Press 'd' to toggle descriptions off
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
+	m = updated.(Model)
+	view = m.View()
+	if strings.Contains(view, "Detailed explanation of task") {
+		t.Errorf("view should hide description after pressing 'd', got:\n%s", view)
+	}
+
+	// Press 'd' again to toggle descriptions back on
+	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
+	m = updated.(Model)
+	view = m.View()
+	if !strings.Contains(view, "Detailed explanation of task") {
+		t.Errorf("view should show description again after pressing 'd', got:\n%s", view)
+	}
+}
+
