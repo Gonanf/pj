@@ -1,11 +1,11 @@
 +++
 id = 2
 title = 'Autocompletado de shell'
-description = 'Generar scripts de autocompletado para fish/zsh con IDs de items'
-state = 'todo'
+description = 'Generar scripts de autocompletado para fish/zsh/bash con IDs de items dinámicos'
+state = 'done'
 type = 'feat'
 created = '2026-08-17T14:21:53-03:00'
-updated = '2026-08-28T17:10:07-03:00'
+updated = '2026-08-28T17:21:00-03:00'
 +++
 
 ## Contexto y Alcance
@@ -30,3 +30,18 @@ El objetivo es acelerar drásticamente el flujo de trabajo en la terminal propor
 
 - **Performance**: El completado de shell debe responder en menos de 30-50ms para evitar latencia perceptible en la interacción.
 - **Fail-safe**: Si `.pm/` no existe en el directorio de trabajo, retornar completados vacíos de forma limpia sin emitir errores en el prompt.
+
+## Implementación Realizada
+
+1. **Subcomando `pj completion` (`cmd/pm/main.go`)**:
+   - Soporte para `bash`, `zsh`, `fish` y `powershell`.
+   - Emite los scripts de completado directamente en `stdout` usando las rutinas nativas de Cobra (`GenBashCompletionV2`, `GenZshCompletion`, `GenFishCompletion`).
+2. **Completado Dinámico de IDs (`itemIDCompletion`)**:
+   - Registrado como `ValidArgsFunction` en `pj done <id>` y `pj edit <id>`.
+   - Consulta los items existentes en `.pm/items/` y devuelve pares `[id]\t[title]` para mostrar descripciones inline en la shell.
+   - Fail-safe inmediato si `.pm` no existe o no tiene tareas.
+3. **Completado de Flags**:
+   - Registrado completado para el flag `--type` / `-t` en `pj add` con `model.ValidTypes` (`feat`, `chore`, `fix`, `docs`).
+4. **Tests**:
+   - `cmd/pm/completion_test.go`: `TestShellCompletionGenerators` y `TestItemIDCompletion`.
+   - `internal/e2e/e2e_test.go`: `TestShellCompletionToEndToEnd`.

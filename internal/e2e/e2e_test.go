@@ -258,4 +258,17 @@ func TestAddInteractiveToEndToEnd(t *testing.T) {
 	}
 }
 
+func TestShellCompletionToEndToEnd(t *testing.T) {
+	dir := newProject(t)
+
+	// Verify completion generation works through CLI
+	for _, sh := range []string{"bash", "zsh", "fish"} {
+		out := run(t, dir, nil, "completion", sh)
+		if len(out) == 0 || !strings.Contains(out, "pj") {
+			t.Errorf("completion for %s invalid or empty:\n%s", sh, out)
+		}
+	}
+}
+
+
 

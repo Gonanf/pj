@@ -498,10 +498,70 @@ var showCmd = &cobra.Command{
 	},
 }
 
+var completionCmd = &cobra.Command{
+	Use:   "completion [bash|zsh|fish|powershell]",
+	Short: "Generate shell completion script",
+	Long: `Generate shell completion script for pj.
+
+To load completions:
+
+Bash:
+  $ source <(pj completion bash)
+
+Zsh:
+  $ source <(pj completion zsh)
+
+Fish:
+  $ pj completion fish | source
+`,
+	DisableFlagsInUseLine: true,
+	ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
+	Args:                  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		out := cmd.OutOrStdout()
+		switch args[0] {
+		case "bash":
+			return cmd.Root().GenBashCompletionV2(out, true)
+		case "zsh":
+			return cmd.Root().GenZshCompletion(out)
+		case "fish":
+			return cmd.Root().GenFishCompletion(out, true)
+		case "powershell":
+			return cmd.Root().GenPowerShellCompletionWithDesc(out)
+		}
+		return nil
+	},
+}
+
+func itemIDCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) > 0 {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	s := store.NewStore(filepath.Join(cwd, ".pm"))
+	items, err := s.LoadItems()
+	if err != nil || len(items) == 0 {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	var completions []string
+	for _, it := range items {
+		completions = append(completions, fmt.Sprintf("%d\t%s", it.ID, it.Title))
+	}
+	return completions, cobra.ShellCompDirectiveNoFileComp
+}
+
 func init() {
 	addCmd.Flags().StringP("description", "d", "", "description of the item (use single quotes for $ and special chars)")
 	addCmd.Flags().StringP("type", "t", "", "item type: feat, chore, fix, docs")
 	addCmd.Flags().BoolP("interactive", "i", false, "set description interactively in $EDITOR (like git)")
+	_ = addCmd.RegisterFlagCompletionFunc("type", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return model.ValidTypes, cobra.ShellCompDirectiveNoFileComp
+	})
+	doneCmd.ValidArgsFunction = itemIDCompletion
+	editCmd.ValidArgsFunction = itemIDCompletion
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(listCmd)
@@ -512,6 +572,7 @@ func init() {
 	rootCmd.AddCommand(renumCmd)
 	finishCmd.Flags().Bool("save", false, "write the summary to .pm/SUMMARY.md")
 	rootCmd.AddCommand(finishCmd)
+	rootCmd.AddCommand(completionCmd)
 }
 
 func main() {
