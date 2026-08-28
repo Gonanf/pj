@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  test:
+    name: Test & Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Verify dependencies
+        run: go mod verify
+
+      - name: Static analysis (go vet)
+        run: go vet ./...
+
+      - name: Run tests
+        run: go test -v -race ./...
+        if: matrix.os != 'windows-latest'
+
+      - name: Run tests (Windows)
+        run: go test -v ./...
+        if: matrix.os == 'windows-latest'
+
+      - name: Compile static binary
+        env:
+          CGO_ENABLED: '0'
+        run: go build -v -ldflags="-s -w" -o pj${{ matrix.os == 'windows-latest' && '.exe' || '' }} ./cmd/pm
+
+      - name: Smoke test binary
+        shell: bash
+        run: |
+          ./pj${{ matrix.os == 'windows-latest' && '.exe' || '' }} --help
+          ./pj${{ matrix.os == 'windows-latest' && '.exe' || '' }} init
+          ./pj${{ matrix.os == 'windows-latest' && '.exe' || '' }} add "Smoke test item" -t feat
+          ./pj${{ matrix.os == 'windows-latest' && '.exe' || '' }} list
+          ./pj${{ matrix.os == 'windows-latest' && '.exe' || '' }} status
