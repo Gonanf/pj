@@ -1,6 +1,0 @@
-id = 16
-title = 'Implementar pj edit'
-description = 'Abrir item en $EDITOR para modificar título, descripción y estado manualmente'
-state = 'done'
-created = '2026-08-17T14:24:13-03:00'
-updated = '2026-08-24T13:12:52-03:00'

@@ -1,6 +1,0 @@
-id = 17
-title = 'Tarea: pj show cicla estados y permite setear con 1-8'
-description = 'El TUI de pj show debe permitir: espacio cicla al siguiente estado, teclas 1-8 setean estado directo. Estados: todo, in progress, testing, blocked, done, closed, in specification, discarded. Barra de progreso cuenta closed.'
-state = 'done'
-created = '2026-08-17T14:39:57-03:00'
-updated = '2026-08-17T14:44:25-03:00'
