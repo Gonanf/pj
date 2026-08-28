@@ -49,11 +49,35 @@ var addCmd = &cobra.Command{
 		s := store.NewStore(filepath.Join(cwd, ".pm"))
 		title := ""
 		desc, _ := cmd.Flags().GetString("description")
+		interactive, _ := cmd.Flags().GetBool("interactive")
+
 		if len(args) == 1 {
 			title = args[0]
-		} else {
+		}
+
+		if interactive {
+			var err error
+			if title == "" {
+				title, desc, err = openEditorForTitleAndDesc()
+				if err != nil {
+					return err
+				}
+				if title == "" {
+					return fmt.Errorf("title required: aborting due to empty title")
+				}
+			} else {
+				iDesc, err := openEditorForDesc(title, desc)
+				if err != nil {
+					return err
+				}
+				if iDesc != "" {
+					desc = iDesc
+				}
+			}
+		} else if title == "" {
 			return fmt.Errorf("title required")
 		}
+
 		typ, _ := cmd.Flags().GetString("type")
 		if typ == "" {
 			typ = model.DetectType(title)
@@ -68,6 +92,96 @@ var addCmd = &cobra.Command{
 		fmt.Printf("Added [#%d] %s\n", item.ID, item.Title)
 		return nil
 	},
+}
+
+func parseInteractiveDescription(content string) string {
+	lines := strings.Split(content, "\n")
+	var kept []string
+	for _, l := range lines {
+		trimmed := strings.TrimSpace(l)
+		if strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		kept = append(kept, l)
+	}
+	return strings.TrimSpace(strings.Join(kept, "\n"))
+}
+
+func parseInteractiveTitleAndDescription(content string) (string, string) {
+	cleaned := parseInteractiveDescription(content)
+	if cleaned == "" {
+		return "", ""
+	}
+	parts := strings.SplitN(cleaned, "\n", 2)
+	title := strings.TrimSpace(parts[0])
+	desc := ""
+	if len(parts) > 1 {
+		desc = strings.TrimSpace(parts[1])
+	}
+	return title, desc
+}
+
+func runEditor(initialContent string) (string, error) {
+	tmp, err := os.CreateTemp("", "pj-add-*.md")
+	if err != nil {
+		return "", err
+	}
+	defer os.Remove(tmp.Name())
+
+	if _, err := tmp.WriteString(initialContent); err != nil {
+		tmp.Close()
+		return "", err
+	}
+	if err := tmp.Close(); err != nil {
+		return "", err
+	}
+
+	parts := strings.Fields(os.Getenv("EDITOR"))
+	if len(parts) == 0 {
+		parts = []string{"vi"}
+	}
+	e := exec.Command(parts[0], parts[1:]...)
+	e.Args = append(e.Args, tmp.Name())
+	e.Stdin, e.Stdout, e.Stderr = os.Stdin, os.Stdout, os.Stderr
+	if err := e.Run(); err != nil {
+		return "", fmt.Errorf("editor %q failed: %w", parts[0], err)
+	}
+
+	raw, err := os.ReadFile(tmp.Name())
+	if err != nil {
+		return "", err
+	}
+	return string(raw), nil
+}
+
+func openEditorForDesc(title, initialDesc string) (string, error) {
+	var b strings.Builder
+	if initialDesc != "" {
+		b.WriteString(initialDesc + "\n")
+	}
+	b.WriteString(fmt.Sprintf("\n# Please enter the description for item: %s\n", title))
+	b.WriteString("# Lines starting with '#' will be ignored.\n")
+	b.WriteString("# An empty message will leave the description unchanged/empty.\n")
+
+	content, err := runEditor(b.String())
+	if err != nil {
+		return "", err
+	}
+	return parseInteractiveDescription(content), nil
+}
+
+func openEditorForTitleAndDesc() (string, string, error) {
+	var b strings.Builder
+	b.WriteString("\n# Please enter the item title on the first line, followed by an optional description.\n")
+	b.WriteString("# Lines starting with '#' will be ignored.\n")
+	b.WriteString("# An empty title will abort the addition.\n")
+
+	content, err := runEditor(b.String())
+	if err != nil {
+		return "", "", err
+	}
+	title, desc := parseInteractiveTitleAndDescription(content)
+	return title, desc, nil
 }
 
 var listCmd = &cobra.Command{
@@ -387,6 +501,7 @@ var showCmd = &cobra.Command{
 func init() {
 	addCmd.Flags().StringP("description", "d", "", "description of the item (use single quotes for $ and special chars)")
 	addCmd.Flags().StringP("type", "t", "", "item type: feat, chore, fix, docs")
+	addCmd.Flags().BoolP("interactive", "i", false, "set description interactively in $EDITOR (like git)")
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(listCmd)

@@ -213,3 +213,49 @@ func TestTUIStateChangeSavesToDisk(t *testing.T) {
 		}
 	}
 }
+
+func TestAddInteractiveToEndToEnd(t *testing.T) {
+	dir := newProject(t)
+
+	// Test 1: pj add "Title" -i with mock editor appending description
+	ed1 := filepath.Join(dir, "ed1.sh")
+	if err := os.WriteFile(ed1, []byte("#!/bin/sh\nprintf \"\\nCustom detailed description\\n# comment to ignore\\n\" >> \"$1\"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	run(t, dir, map[string]string{"EDITOR": ed1}, "add", "Item with interactive desc", "-i")
+
+	s := store.NewStore(filepath.Join(dir, ".pm"))
+	item, err := s.FindItem(1)
+	if err != nil {
+		t.Fatalf("failed to find item 1: %v", err)
+	}
+	if item.Title != "Item with interactive desc" {
+		t.Errorf("expected title 'Item with interactive desc', got %q", item.Title)
+	}
+	if item.Description != "Custom detailed description" {
+		t.Errorf("expected description 'Custom detailed description', got %q", item.Description)
+	}
+
+	// Test 2: pj add -i with mock editor providing both title and description
+	ed2 := filepath.Join(dir, "ed2.sh")
+	if err := os.WriteFile(ed2, []byte("#!/bin/sh\nprintf \"feat: full interactive task\\n\\nBody of full interactive task\\n\" > \"$1\"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	run(t, dir, map[string]string{"EDITOR": ed2}, "add", "-i")
+
+	item2, err := s.FindItem(2)
+	if err != nil {
+		t.Fatalf("failed to find item 2: %v", err)
+	}
+	if item2.Title != "feat: full interactive task" {
+		t.Errorf("expected title 'feat: full interactive task', got %q", item2.Title)
+	}
+	if item2.Type != "feat" {
+		t.Errorf("expected auto-detected type 'feat', got %q", item2.Type)
+	}
+	if item2.Description != "Body of full interactive task" {
+		t.Errorf("expected description 'Body of full interactive task', got %q", item2.Description)
+	}
+}
+
+
