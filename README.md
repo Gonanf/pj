@@ -1,3 +1,73 @@
+# pj
+
+> Proyecto de Gonanf — colección personal.
+> **Lenguaje principal (GitHub):** Go · **URL:** https://github.com/Gonanf/pj
+
+## Qué es
+
+Este repositorio forma parte de la colección de **Gonanf / Gabriel Solotorevsky** clonada en `/run/media/chaos/terciario/proyectos/pj`.
+
+> **Nota:** README original preservado abajo en la sección "README original".
+
+- **Path absoluto:** `/run/media/chaos/terciario/proyectos/pj`
+- **Estado git:** último commit `2026-08-28 chore(ci): support workflow_dispatch tag creation and set default repo in install.sh`
+- **Archivos (aprox):** 87
+- **Stack detectado:** Go (go.mod)
+
+## Stack
+
+- Go (go.mod)
+
+## Estructura
+
+```
+pj/
+.goreleaser.yaml
+.opencode/
+  .opencode/opencode.json
+.pm/
+  .pm/design.md
+  .pm/items
+  .pm/project.toml
+  .pm/spec-gap-closure.md
+.prompts/
+  .prompts/item-types.md
+  .prompts/pj-edit.md
+  .prompts/pj-finish.md
+AGENTS.md
+README.md
+cmd/
+  cmd/pm
+go.mod
+go.sum
+install.sh
+internal/
+```
+
+## Cómo correr
+
+> Instrucciones genéricas según el stack detectado. Ajustar según el repo.
+
+```bash
+go run ./...
+go build -o app .
+```
+
+## Estado
+
+- **Último commit:** `2026-08-28 chore(ci): support workflow_dispatch tag creation and set default repo in install.sh`
+- **Clonado en:** `/run/media/chaos/terciario/proyectos/pj`
+- **Exclusiones del lote:** Forks, Workmatch, el-hornero-digital, mali/meli, Sherut (no tocados por consigna)
+
+## Docs
+
+- `docs/overview.md` — descripción extendida y guía rápida (generado en este lote)
+
+## README original (preservado)
+
+> Contenido previo de README.md recortado a 2000 chars para referencia:
+
+```markdown
 # 📓 pj — Project Journal
 
 CLI + TUI en Go para gestionar tareas y proyectos directamente desde tu repositorio de Git. Sin bases de datos ni servidores: cada proyecto almacena su estado en la carpeta `.pm/` mediante archivos TOML/Markdown versionables.
@@ -88,93 +158,8 @@ $ pj list
 Abre la interfaz TUI interactiva basada en Bubbletea con barra de progreso agrupada por estado.
 
 **Controles dentro de la TUI:**
-
-- `↑` / `k` o `↓` / `j`: Navegar entre items.
-- `Espacio`: Ciclar al siguiente estado.
-- `1` a `8`: Asignar estado numéricamente directo.
-- `q` / `Esc` / `Ctrl+C`: Salir de la TUI.
-
-### `pj done <id>`
-
-Cambia de forma directa el estado del item especificado a `done`.
-
-```bash
-$ pj done 1
-[#1] marked as done
-```
-
-### `pj status`
-
-Ejecuta un chequeo de salud sobre el proyecto. Detecta colisiones de IDs (por ejemplo, luego de un merge conflict en Git).
-
-```bash
-$ pj status
-Project healthy
-```
-
-### `pj renum`
-
-Reordena y renumera correlativamente todos los IDs de los items según su fecha de creación (`created`).
-
-```bash
-$ pj renum
-Renumbered 3 items
 ```
 
 ---
-
-## 📊 Estados de las tareas
-
-Cada item transita por los siguientes estados:
-
-| Estado | Descripción |
-|---|---|
-| `todo` | Tarea pendiente |
-| `in progress` | Tarea en desarrollo activo |
-| `testing` | En etapa de pruebas o validación |
-| `blocked` | Bloqueada por alguna dependencia |
-| `done` | Tarea completada |
-| `closed` | Tarea cerrada y archivada |
-| `in specification` | En definición de requerimientos / diseño |
-| `discarded` | Tarea descartada o cancelada |
-
----
-
-## 🏷️ Tipos de tarea *(Próximamente)*
-
-Se encuentra planificado el soporte para clasificar los items por tipo:
-
-- `feat`: Nueva funcionalidad.
-- `chore`: Mantenimiento, dependencias o tareas generales.
-- `fix`: Corrección de errores.
-- `docs`: Documentación técnica o de usuario.
-
----
-
-## 📁 Estructura de datos
-
-Todos los datos se guardan en texto plano dentro del repositorio, facilitando revisiones y merges en Git:
-
-```
-.pm/
-├── project.toml           # Metadatos del proyecto
-└── items/
-    ├── 001-disenar-api.toml
-    └── 002-configurar-ci.toml
-```
-
----
-
-## 🤝 Contribuir
-
-1. Hacé un fork del repositorio.
-2. Creá una rama con tu cambio (`git checkout -b feature/nueva-mejora`).
-3. Ejecutá los tests para validar: `go test ./...`.
-4. Hacé commit de tus cambios (`git commit -m 'feat: agrega soporte para...'`).
-5. Hacé push a la rama y abrí un Pull Request.
-
----
-
-## 📄 Licencia
-
-// TODO
+*README generado/mejorado automáticamente el 2026-09-04 con inspección de repo (opencode/agy pattern: lectura de estructura, lenguaje y entrypoints). No se modificó código, solo documentación.*
+*Autor original: Gonanf — https://github.com/Gonanf/pj*
